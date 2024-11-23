@@ -1,12 +1,10 @@
-import ModelSelector from '../components/ModelSelector'
-import DecisionDisplay from '../components/DecisionDisplay'
+import ModelSelector from '@/components/ModelSelector';
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="space-y-8">
+    <div className="flex justify-center mt-20 bg-background text-foreground">
       <ModelSelector />
-      <DecisionDisplay decisionId={""} />
-    </div>
-  )
-}
 
+    </div>
+  );
+}

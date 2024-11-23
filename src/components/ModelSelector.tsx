@@ -1,120 +1,158 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, SetStateAction } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectItem, SelectTrigger, SelectContent } from '@/components/ui/select';
+import { useRouter } from 'next/navigation';
 
 export default function ModelSelector() {
-  const [models, setModels] = useState<any[]>([])
-  const [selectedModel, setSelectedModel] = useState('')
-  const [inputVariables, setInputVariables] = useState<any[]>([])
-  const [formData, setFormData] = useState({})
-  const router = useRouter()
+  const [models, setModels] = useState<any[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModelName, setSelectedModelName] = useState<string>('Select a model'); // To display the selected model's name
+  const [inputVariables, setInputVariables] = useState<any[]>([]);
+  const [exclusions, setExclusions] = useState<any[]>([]);
+  const [formData, setFormData] = useState({});
+  const router = useRouter();
 
   useEffect(() => {
-    fetchModels()
-  }, [])
+    fetchModels();
+  }, []);
 
   const fetchModels = async () => {
-    const response = await fetch('/api/models')
-    const data = await response.json()
-    setModels(data.data)
-    console.log(data.data)
-  }
+    const response = await fetch('/api/models');
+    const data = await response.json();
+    setModels(data.data);
+    console.log(data.data);
+  };
 
-  const handleModelSelect = async (e: { target: { value: any } }) => {
-    const modelId = e.target.value
-    setSelectedModel(modelId)
-    const response = await fetch(`/api/models/${modelId}`)
-    const data = await response.json()
-    console.log("Attributes")
-    console.log(data.data.attributes.metadata.attributes)
-    setInputVariables(data.data.attributes.metadata.attributes)
-    setFormData({})
-  }
+  const handleModelSelect = async (modelId: string) => {
+    const selectedModel = models.find((model) => model.id === modelId); // Find the selected model's details
+    setSelectedModel(modelId);
+    setSelectedModelName(selectedModel.attributes.name); // Update the selected model's name
+    const response = await fetch(`/api/models/${modelId}`);
+    const data = await response.json();
+    console.log('Attributes');
+    console.log(data.data.attributes.metadata.attributes);
+    setInputVariables(data.data.attributes.metadata.attributes);
+    setFormData({});
+  };
 
-  const handleInputChange = (e: { target: { name: any; value: any; type: string } }) => {
-    const { name, value, type } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === 'number' ? parseFloat(value) : value, // Convert to number if input type is 'number'
-    })
-  }
+  const handleInputChange = (name: string, value: any) => {
+    setFormData({ ...formData, [name]: value });
+
+    exclusions.forEach((rule) => {
+      if (evaluateRule(rule, formData)) {
+        applyConsequent(rule, setFormData);
+      }
+    });
+  };
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
-    e.preventDefault()
+    e.preventDefault();
     const response = await fetch('/api/decision', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modelId: selectedModel, input: formData }),
-    })
-    const data = await response.json()
-    router.push(`/decisions`)
+    });
+    const data = await response.json();
+    router.push(`/decision/${data.id}`);
+  };
+
+  function evaluateRule(rule: { antecedent: any; }, formData: { [x: string]: any; }) {
+    const { antecedent } = rule;
+
+    if (Array.isArray(antecedent)) {
+      // For ValueEx, evaluate all antecedent conditions
+      return antecedent.every(({ index, threshold, type }) => {
+        const fieldName = inputVariables[index].name; // Map index to input field name
+        const fieldValue = formData[fieldName];
+        if (type === 'EQ') return fieldValue === threshold;
+        if (type === 'GT') return fieldValue > threshold;
+        if (type === 'LT') return fieldValue < threshold;
+        return false; // Add other operators as needed
+      });
+    } else {
+      // For BlatantEx or RelationshipEx
+      const { index, threshold, type } = antecedent;
+      const fieldName = inputVariables[index].name; // Map index to input field name
+      const fieldValue = formData[fieldName];
+      if (type === 'EQ') return fieldValue === threshold;
+      if (type === 'GT') return fieldValue > threshold;
+      if (type === 'LT') return fieldValue < threshold;
+      return false; // Add other operators as needed
+    }
   }
 
+  function applyConsequent(rule, setFormData) {
+    const { consequent } = rule;
+
+    if (rule.type === 'BlatantEx') {
+      // Set a result directly
+      setFormData((prev: any) => ({
+        ...prev,
+        result: consequent.value,
+      }));
+    } else if (rule.type === 'ValueEx') {
+      // Disable or modify specific fields based on the consequent
+      consequent.forEach(({ index, threshold }) => {
+        const fieldName = inputVariables[index].name;
+        setFormData((prev: any) => ({
+          ...prev,
+          [fieldName]: threshold,
+        }));
+      });
+    }
+  }
+
+
   return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <h2 className="text-2xl font-semibold mb-4">Select a Model</h2>
-      <select
-        className="w-full p-2 border rounded mb-4"
-        onChange={handleModelSelect}
-        value={selectedModel}
-      >
-        <option value="">Select a model</option>
-        {models.map((model) => (
-          <option key={model.id} value={model.id}>
-            {model.attributes.name}
-          </option>
-        ))}
-      </select>
-      {inputVariables.length > 0 && (
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="max-w-xl min-w-[400px] mx-auto bg-card p-6 rounded-lg">
+      <h2 className="text-xl font-semibold mb-4">Select a Model</h2>
+      <Select onValueChange={handleModelSelect}>
+        <SelectTrigger className="w-full">
+          {selectedModelName} {/* Dynamically show the selected model name */}
+        </SelectTrigger>
+        <SelectContent>
+          {models.map((model) => (
+            <SelectItem key={model.id} value={model.id}>
+              {model.attributes.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {selectedModel && (
+        <form onSubmit={handleSubmit} className="mt-6">
           {inputVariables.map((variable) => (
-            <div key={variable.name}>
-              <label className="block text-sm font-medium text-gray-700">
-                {variable.question}
-              </label>
+            <div key={variable.name} className="mb-4">
+              <label className="block text-sm font-medium">{variable.question}</label>
               {variable.type === 'Continuous' ? (
-                <input
+                <Input
                   type="number"
-                  name={variable.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full p-2 border rounded"
-                  min={variable.domain.lower} // Set 'min' for continuous
-                  max={variable.domain.upper} // Set 'max' for continuous
-                  step={variable.domain.interval} // Set 'step' for continuous
-                  required
+                  min={variable.domain.lower}
+                  max={variable.domain.upper}
+                  step={variable.domain.interval}
+                  onChange={(e) => handleInputChange(variable.name, e.target.value)}
                 />
               ) : (
-                // Nominal input as a dropdown
-                <select
-                  name={variable.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full p-2 border rounded"
-                  defaultValue="" // Default placeholder
-                  required
-                >
-                  {/* Default placeholder option */}
-                  <option value="" disabled>
-                    Select an option
-                  </option>
-                  {/* Map through predefined options */}
-                  {variable.domain.values.map((option: string) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <Select onValueChange={(value) => handleInputChange(variable.name, value)}>
+                  <SelectTrigger className="w-full">Select an option</SelectTrigger>
+                  <SelectContent>
+                    {variable.domain.values.map((value: string) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
           ))}
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Get Decision
-          </button>
+          <Button type="submit" className="w-full mt-4">
+            Submit
+          </Button>
         </form>
       )}
     </div>
-  )
+  );
 }

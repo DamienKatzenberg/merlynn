@@ -1,34 +1,56 @@
-import Link from 'next/link'
-import './globals.css'
-import { Inter } from 'next/font/google'
+'use client';
 
-const inter = Inter({ subsets: ['latin'] })
+import { ThemeProvider } from 'next-themes';
+import Link from 'next/link';
+import { ReactNode, useEffect, useState } from 'react';
+import './globals.css';
 
-export const metadata = {
-  title: 'TOM API Integration',
-  description: 'Merlynn Intelligence Technologies Coding Assessment',
-}
+export default function RootLayout({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+  useEffect(() => {
+    setMounted(true); // Ensure the component mounts client-side
+  }, []);
+
+  if (!mounted) return null; // Prevents rendering until the client resolves the theme
+
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-100`}>
-        <div className="container mx-auto px-4 py-8">
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">TOM API Integration</h1>
-          </header>
-          <div className='flex gap-8 mb-8'>
-            <Link href="/"><h3 className="text-xl font-bold text-gray-800">New Prompt</h3></Link>
-            <Link href="/decisions"><h3 className="text-xl font-bold text-gray-800">Decisions</h3></Link>
-          </div>
-          <main>{children}</main>
-        </div>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="dark">
+          {/* Navbar */}
+          <nav className="bg-background border-b border-border text-foreground shadow-md">
+            <div className="container mx-auto flex justify-between items-center p-4">
+              <div className="text-xl font-bold">UP2TOM Integration</div>
+              <ul className="flex space-x-6 text-sm font-medium">
+                <li>
+                  <Link href="/" className="hover:text-primary">
+                    New Prompt
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/batch" className="hover:text-primary">
+                    Batch
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/decisions" className="hover:text-primary">
+                    Decisions
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-primary">
+                    About Me
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </nav>
+
+          {/* Main Content */}
+          <main className="container mx-auto p-6">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
-
