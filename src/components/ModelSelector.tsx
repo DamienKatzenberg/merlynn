@@ -11,8 +11,8 @@ export default function ModelSelector() {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [selectedModelName, setSelectedModelName] = useState<string>('Select a model'); // To display the selected model's name
   const [inputVariables, setInputVariables] = useState<any[]>([]);
-  const [exclusions, setExclusions] = useState<any[]>([]);
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [disabledFields, setDisabledFields] = useState({});
   const router = useRouter();
 
   useEffect(() => {
@@ -40,12 +40,6 @@ export default function ModelSelector() {
 
   const handleInputChange = (name: string, value: any) => {
     setFormData({ ...formData, [name]: value });
-
-    exclusions.forEach((rule) => {
-      if (evaluateRule(rule, formData)) {
-        applyConsequent(rule, setFormData);
-      }
-    });
   };
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
@@ -59,7 +53,7 @@ export default function ModelSelector() {
     router.push(`/decision/${data.id}`);
   };
 
-  function evaluateRule(rule: { antecedent: any; }, formData: { [x: string]: any; }) {
+  function evaluateRule(rule, formData) {
     const { antecedent } = rule;
 
     if (Array.isArray(antecedent)) {
@@ -84,26 +78,31 @@ export default function ModelSelector() {
     }
   }
 
-  function applyConsequent(rule, setFormData) {
-    const { consequent } = rule;
+  // function applyConsequent(rule, setFormData, setDisabledFields) {
+  //   const { consequent } = rule;
 
-    if (rule.type === 'BlatantEx') {
-      // Set a result directly
-      setFormData((prev: any) => ({
-        ...prev,
-        result: consequent.value,
-      }));
-    } else if (rule.type === 'ValueEx') {
-      // Disable or modify specific fields based on the consequent
-      consequent.forEach(({ index, threshold }) => {
-        const fieldName = inputVariables[index].name;
-        setFormData((prev: any) => ({
-          ...prev,
-          [fieldName]: threshold,
-        }));
-      });
-    }
-  }
+  //   if (rule.type === 'BlatantEx') {
+  //     // Set a result directly
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       result: consequent.value,
+  //     }));
+  //   } else if (rule.type === 'ValueEx') {
+  //     // Disable or modify specific fields based on the consequent
+  //     consequent.forEach(({ index, threshold }) => {
+  //       const fieldName = inputVariables[index].name;
+  //       setFormData((prev) => ({
+  //         ...prev,
+  //         [fieldName]: threshold,
+  //       }));
+  //       setDisabledFields((prev) => ({
+  //         ...prev,
+  //         [fieldName]: true, // Disable the field
+  //       }));
+  //     });
+  //   }
+  // }
+
 
 
   return (
@@ -133,10 +132,11 @@ export default function ModelSelector() {
                   max={variable.domain.upper}
                   step={variable.domain.interval}
                   onChange={(e) => handleInputChange(variable.name, e.target.value)}
+                  disabled={disabledFields[variable.name]}
                 />
               ) : (
-                <Select onValueChange={(value) => handleInputChange(variable.name, value)}>
-                  <SelectTrigger className="w-full">Select an option</SelectTrigger>
+                <Select onValueChange={(value) => handleInputChange(variable.name, value)} disabled={disabledFields[variable.name]}>
+                  <SelectTrigger className="w-full">{formData[variable.name] || "Select an option"}</SelectTrigger>
                   <SelectContent>
                     {variable.domain.values.map((value: string) => (
                       <SelectItem key={value} value={value}>
