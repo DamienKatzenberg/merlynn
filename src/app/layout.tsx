@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes';
 import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
 import './globals.css';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
           {/* Main Content */}
           <main className="container mx-auto p-6">{children}</main>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

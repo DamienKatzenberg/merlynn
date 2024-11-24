@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem, SelectTrigger, SelectContent } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/hooks/use-toast';
 
 export default function ModelSelector() {
   const [models, setModels] = useState<any[]>([]);
@@ -13,6 +14,7 @@ export default function ModelSelector() {
   const [inputVariables, setInputVariables] = useState<any[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [disabledFields, setDisabledFields] = useState({});
+  const [exclusions, setExclusions] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function ModelSelector() {
     const selectedModel = models.find((model) => model.id === modelId); // Find the selected model's details
     setSelectedModel(modelId);
     setSelectedModelName(selectedModel.attributes.name); // Update the selected model's name
+    setExclusions(selectedModel.attributes.exclusions.rules);
     const response = await fetch(`/api/models/${modelId}`);
     const data = await response.json();
     console.log('Attributes');
@@ -39,19 +42,57 @@ export default function ModelSelector() {
   };
 
   const handleInputChange = (name: string, value: any) => {
-    setFormData({ ...formData, [name]: value });
+    // Update formData with the new value
+    const updatedFormData = { ...formData, [name]: value };
+    setFormData(updatedFormData);
+
+    // Track which fields should remain disabled
+    const updatedDisabledFields = {};
+
+    // Evaluate all exclusion rules
+    exclusions.forEach((rule) => {
+      if (evaluateRule(rule, updatedFormData)) {
+        console.log("Rule matched: ", rule);
+        applyConsequent(rule, setFormData, setDisabledFields);
+      }
+    });
   };
+
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    const response = await fetch('/api/decision', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ modelId: selectedModel, input: formData }),
+
+    // Check if all fields are filled
+    const allFieldsFilled = inputVariables.every((variable) => {
+      const value = formData[variable.name];
+      return value !== undefined && value !== null && value !== ''; // Ensure value is not empty
     });
-    const data = await response.json();
-    router.push(`/decision/${data.id}`);
+
+    if (!allFieldsFilled) {
+      // Trigger error toast if validation fails
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields before submitting.",
+      })
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelId: selectedModel, input: formData }),
+      });
+      const data = await response.json();
+      router.push(`/decision/${data.id}`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occured while submitting. Please try again",
+      })
+    }
   };
+
 
   function evaluateRule(rule, formData) {
     const { antecedent } = rule;
@@ -62,48 +103,84 @@ export default function ModelSelector() {
         const fieldName = inputVariables[index].name; // Map index to input field name
         const fieldValue = formData[fieldName];
         if (type === 'EQ') return fieldValue === threshold;
+        if (type === 'NEQ') return fieldValue !== threshold;
+        if (type === 'GTEQ') return fieldValue >= threshold;
         if (type === 'GT') return fieldValue > threshold;
+        if (type === 'LTEQ') return fieldValue <= threshold;
         if (type === 'LT') return fieldValue < threshold;
         return false; // Add other operators as needed
       });
     } else {
       // For BlatantEx or RelationshipEx
-      const { index, threshold, type } = antecedent;
-      const fieldName = inputVariables[index].name; // Map index to input field name
-      const fieldValue = formData[fieldName];
-      if (type === 'EQ') return fieldValue === threshold;
-      if (type === 'GT') return fieldValue > threshold;
-      if (type === 'LT') return fieldValue < threshold;
-      return false; // Add other operators as needed
+      if (rule.type === 'RelationshipEx') {
+        const { index, threshold, type } = rule.relation;
+        const fieldName = inputVariables[index].name; // Map index to input field name
+        const fieldValue = formData[fieldName];
+        if (type === 'EQ') return fieldValue === threshold;
+        if (type === 'NEQ') return fieldValue !== threshold;
+        if (type === 'GTEQ') return fieldValue >= threshold;
+        if (type === 'GT') return fieldValue > threshold;
+        if (type === 'LTEQ') return fieldValue <= threshold;
+        if (type === 'LT') return fieldValue < threshold;
+        return false; // Add other operators as needed
+      } else {
+        const { index, threshold, type } = antecedent;
+        const fieldName = inputVariables[index].name; // Map index to input field name
+        const fieldValue = formData[fieldName];
+        if (type === 'EQ') return fieldValue === threshold;
+        if (type === 'NEQ') return fieldValue !== threshold;
+        if (type === 'GTEQ') return fieldValue >= threshold;
+        if (type === 'GT') return fieldValue > threshold;
+        if (type === 'LTEQ') return fieldValue <= threshold;
+        if (type === 'LT') return fieldValue < threshold;
+        return false; // Add other operators as needed
+      }
     }
   }
 
-  // function applyConsequent(rule, setFormData, setDisabledFields) {
-  //   const { consequent } = rule;
+  function applyConsequent(rule, setFormData, setDisabledFields) {
+    const { consequent } = rule;
 
-  //   if (rule.type === 'BlatantEx') {
-  //     // Set a result directly
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       result: consequent.value,
-  //     }));
-  //   } else if (rule.type === 'ValueEx') {
-  //     // Disable or modify specific fields based on the consequent
-  //     consequent.forEach(({ index, threshold }) => {
-  //       const fieldName = inputVariables[index].name;
-  //       setFormData((prev) => ({
-  //         ...prev,
-  //         [fieldName]: threshold,
-  //       }));
-  //       setDisabledFields((prev) => ({
-  //         ...prev,
-  //         [fieldName]: true, // Disable the field
-  //       }));
-  //     });
-  //   }
-  // }
+    if (rule.type === 'BlatantEx') {
+      // Directly set a result for BlatantEx rules
+      setFormData((prev: any) => ({
+        ...prev,
+        result: consequent.value,
+      }));
+    } else if (rule.type === 'ValueEx') {
+      // Track updated disabled fields separately to avoid unintended changes
+      const updatedDisabledFields = {};
 
+      consequent.forEach(({ index, threshold, type }: { index: number; threshold: any; type: string }) => {
+        const fieldName = inputVariables[index]?.name;
 
+        if (type === 'EQ') {
+          // Set the field to the specified value and disable it
+          setFormData((prev: any) => ({
+            ...prev,
+            [fieldName]: threshold,
+          }));
+          updatedDisabledFields[fieldName] = true;
+        } else if (type === 'NEQ') {
+          // Ensure the field is not equal to the specified value
+          setFormData((prev: any) => {
+            const currentValue = prev[fieldName];
+            return {
+              ...prev,
+              [fieldName]: currentValue === threshold ? 'Select an option' : currentValue, // Clear if equal to threshold
+            };
+          });
+          updatedDisabledFields[fieldName] = false; // Ensure the field remains enabled
+        }
+      });
+
+      // Apply the updated disabled fields
+      setDisabledFields((prev: any) => ({
+        ...prev,
+        ...updatedDisabledFields,
+      }));
+    }
+  }
 
   return (
     <div className="max-w-xl min-w-[400px] mx-auto bg-card p-6 rounded-lg">
