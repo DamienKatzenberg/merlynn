@@ -84,7 +84,7 @@ export default function ModelSelector() {
         body: JSON.stringify({ modelId: selectedModel, input: formData }),
       });
       const data = await response.json();
-      router.push(`/decision/${data.id}`);
+      router.push(`/decisions`);
     } catch (error) {
       toast({
         title: "Error",
@@ -102,6 +102,7 @@ export default function ModelSelector() {
       return antecedent.every(({ index, threshold, type }) => {
         const fieldName = inputVariables[index].name; // Map index to input field name
         const fieldValue = formData[fieldName];
+        if (fieldValue === undefined || fieldValue === null) return false;
         if (type === 'EQ') return fieldValue === threshold;
         if (type === 'NEQ') return fieldValue !== threshold;
         if (type === 'GTEQ') return fieldValue >= threshold;
@@ -116,6 +117,7 @@ export default function ModelSelector() {
         const { index, threshold, type } = rule.relation;
         const fieldName = inputVariables[index].name; // Map index to input field name
         const fieldValue = formData[fieldName];
+        if (fieldValue === undefined || fieldValue === null) return false;
         if (type === 'EQ') return fieldValue === threshold;
         if (type === 'NEQ') return fieldValue !== threshold;
         if (type === 'GTEQ') return fieldValue >= threshold;
@@ -127,6 +129,7 @@ export default function ModelSelector() {
         const { index, threshold, type } = antecedent;
         const fieldName = inputVariables[index].name; // Map index to input field name
         const fieldValue = formData[fieldName];
+        if (fieldValue === undefined || fieldValue === null) return false;
         if (type === 'EQ') return fieldValue === threshold;
         if (type === 'NEQ') return fieldValue !== threshold;
         if (type === 'GTEQ') return fieldValue >= threshold;
@@ -167,7 +170,7 @@ export default function ModelSelector() {
             const currentValue = prev[fieldName];
             return {
               ...prev,
-              [fieldName]: currentValue === threshold ? 'Select an option' : currentValue, // Clear if equal to threshold
+              [fieldName]: currentValue === threshold ? '' : currentValue, // Clear if equal to threshold
             };
           });
           updatedDisabledFields[fieldName] = false; // Ensure the field remains enabled
@@ -212,7 +215,7 @@ export default function ModelSelector() {
                   disabled={disabledFields[variable.name]}
                 />
               ) : (
-                <Select onValueChange={(value) => handleInputChange(variable.name, value)} disabled={disabledFields[variable.name]}>
+                <Select onValueChange={(value) => handleInputChange(variable.name, value)} disabled={disabledFields[variable.name]} value={formData[variable.name]}>
                   <SelectTrigger className="w-full">{formData[variable.name] || "Select an option"}</SelectTrigger>
                   <SelectContent>
                     {variable.domain.values.map((value: string) => (

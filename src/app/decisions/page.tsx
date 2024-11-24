@@ -14,7 +14,13 @@ export default async function Decisions() {
           </h3>
           <h4 className="text-lg font-medium mb-2 text-card-foreground">Inputs:</h4>
           <pre className="bg-muted p-4 rounded overflow-x-auto mb-4 text-muted-foreground">
-            {JSON.stringify(decision.input, null, 2)}
+            {JSON.stringify(
+              Object.fromEntries(
+                Object.entries(decision.input).filter(([key]) => key !== "result")
+              ),
+              null,
+              2
+            )}
           </pre>
           <h4 className="text-lg font-medium mb-2 text-card-foreground">Decision:</h4>
           <pre className="bg-muted p-4 rounded overflow-x-auto text-muted-foreground">
