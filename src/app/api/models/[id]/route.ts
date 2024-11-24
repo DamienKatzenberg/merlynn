@@ -4,7 +4,7 @@ const API_KEY = process.env.TOM_API_KEY
 const API_URL = 'https://api.up2tom.com/v3'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id
+  const id = await params.id
   try {
     const response = await fetch(`${API_URL}/models/${id}`, {
       headers: {
