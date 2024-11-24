@@ -69,6 +69,9 @@ export default function Batch() {
                                     Job ID: {job.id}
                                 </h3>
                                 <h4 className="text-lg font-medium mb-2 text-card-foreground">
+                                    File: {job.filename || "N/A"}
+                                </h4>
+                                <h4 className="text-lg font-medium mb-2 text-card-foreground">
                                     Timestamp: {new Date(job.timestamp).toLocaleString()}
                                 </h4>
                             </div>
