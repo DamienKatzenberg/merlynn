@@ -39,11 +39,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     Decisions
                   </Link>
                 </li>
-                <li>
-                  <Link href="/about" className="hover:text-primary">
-                    About Me
-                  </Link>
-                </li>
               </ul>
             </div>
           </nav>

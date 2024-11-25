@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ToastProvider, Toast, ToastTitle, ToastDescription } from '@/components/ui/toast';
 import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
+import { toast } from '@/hooks/use-toast';
 
 export default function FileUpload({ setCurrentlySelectedModel }: { setCurrentlySelectedModel: (modelId: string) => void }) {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [toastMessage, setToastMessage] = useState<string | null>(null);
-    const [showToast, setShowToast] = useState(false);
 
     const [models, setModels] = useState<any[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>('');
@@ -43,14 +41,18 @@ export default function FileUpload({ setCurrentlySelectedModel }: { setCurrently
 
     const handleFileUpload = async () => {
         if (!file) {
-            setToastMessage('Please select a file before uploading.');
-            setShowToast(true);
+            toast({
+                title: "Invalid File",
+                description: "Please select a file before uploading",
+            })
             return;
         }
 
         if (!file.name.endsWith('.csv')) {
-            setToastMessage('Invalid file type. Please upload a CSV file.');
-            setShowToast(true);
+            toast({
+                title: "Invalid File",
+                description: "Invalid file type. Please upload a CSV file.",
+            })
             return;
         }
 
@@ -70,11 +72,15 @@ export default function FileUpload({ setCurrentlySelectedModel }: { setCurrently
             }
 
             const result = await response.json();
-            setToastMessage('File uploaded successfully.');
-            setShowToast(true);
+            toast({
+                title: "Success",
+                description: "File uploaded successfully.",
+            })
         } catch (error) {
-            setToastMessage('Failed to upload file. Please try again.');
-            setShowToast(true);
+            toast({
+                title: "Error",
+                description: "Failed to upload file. Please try again",
+            })
             console.error('Upload error:', error);
         } finally {
             setUploading(false);
@@ -112,18 +118,6 @@ export default function FileUpload({ setCurrentlySelectedModel }: { setCurrently
                 >
                     {uploading ? 'Uploading...' : 'Upload File'}
                 </Button>
-
-                {/* Toast for Notifications */}
-                {showToast && (
-                    <ToastProvider>
-                        <Toast onOpenChange={setShowToast}>
-                            <div className="flex flex-col space-y-1">
-                                <ToastTitle>{toastMessage?.includes('successfully') ? 'Success' : 'Error'}</ToastTitle>
-                                <ToastDescription>{toastMessage}</ToastDescription>
-                            </div>
-                        </Toast>
-                    </ToastProvider>
-                )}
             </div>
         </div>
     );
