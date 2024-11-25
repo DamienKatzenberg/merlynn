@@ -1,4 +1,4 @@
-### **README for Batch Processing Application**
+### **README for UP2TOM Application**
 
 ---
 
