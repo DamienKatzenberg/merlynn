@@ -24,7 +24,6 @@ export default function ModelSelector() {
   const fetchModels = async () => {
     const response = await fetch('/api/models');
     const data = await response.json();
-    console.log(data.data)
     setModels(data.data);
   };
 
@@ -187,7 +186,7 @@ export default function ModelSelector() {
       <h2 className="text-xl font-semibold mb-4">Select a Model</h2>
       <Select onValueChange={handleModelSelect}>
         <SelectTrigger className="w-full">
-          {selectedModelName} {/* Dynamically show the selected model name */}
+          {selectedModelName}
         </SelectTrigger>
         <SelectContent>
           {models.map((model) => (
@@ -202,7 +201,6 @@ export default function ModelSelector() {
           {inputVariables.map((variable) => (
             <div key={variable.name} className="mb-4">
               <label className="block text-sm font-medium">{variable.question}</label>
-              <p>Discrete: {variable.domain.discrete ? 'Yes' : 'No'}</p>
               {variable.type === 'Continuous' ? (
                 <Input
                   type="number"
