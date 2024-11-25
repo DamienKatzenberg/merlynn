@@ -19,7 +19,6 @@ export async function POST(request: Request) {
   const { modelId, input } = await request.json()
 
   const scenarioObject = createScenario(input);
-  console.log(JSON.stringify(scenarioObject, null, 2))
 
   try {
     const response = await fetch(`${API_URL}/decision/${modelId}`, {

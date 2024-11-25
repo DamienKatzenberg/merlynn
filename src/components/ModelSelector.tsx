@@ -13,7 +13,7 @@ export default function ModelSelector() {
   const [selectedModelName, setSelectedModelName] = useState<string>('Select a model'); // To display the selected model's name
   const [inputVariables, setInputVariables] = useState<any[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [disabledFields, setDisabledFields] = useState({});
+  const [disabledFields, setDisabledFields] = useState<Record<string, boolean>>({});
   const [exclusions, setExclusions] = useState<any[]>([]);
   const router = useRouter();
 
@@ -24,8 +24,8 @@ export default function ModelSelector() {
   const fetchModels = async () => {
     const response = await fetch('/api/models');
     const data = await response.json();
+    console.log(data.data)
     setModels(data.data);
-    console.log(data.data);
   };
 
   const handleModelSelect = async (modelId: string) => {
@@ -35,8 +35,6 @@ export default function ModelSelector() {
     setExclusions(selectedModel.attributes.exclusions.rules);
     const response = await fetch(`/api/models/${modelId}`);
     const data = await response.json();
-    console.log('Attributes');
-    console.log(data.data.attributes.metadata.attributes);
     setInputVariables(data.data.attributes.metadata.attributes);
     setFormData({});
   };
@@ -52,7 +50,6 @@ export default function ModelSelector() {
     // Evaluate all exclusion rules
     exclusions.forEach((rule) => {
       if (evaluateRule(rule, updatedFormData)) {
-        console.log("Rule matched: ", rule);
         applyConsequent(rule, setFormData, setDisabledFields);
       }
     });
@@ -94,7 +91,7 @@ export default function ModelSelector() {
   };
 
 
-  function evaluateRule(rule, formData) {
+  function evaluateRule(rule: { type?: any; relation?: any; antecedent?: any; }, formData: { [x: string]: any; }) {
     const { antecedent } = rule;
 
     if (Array.isArray(antecedent)) {
@@ -141,7 +138,7 @@ export default function ModelSelector() {
     }
   }
 
-  function applyConsequent(rule, setFormData, setDisabledFields) {
+  function applyConsequent(rule: { type?: any; consequent?: any; }, setFormData: { (value: SetStateAction<Record<string, any>>): void; (arg0: { (prev: any): any; (prev: any): any; (prev: any): any; }): void; }, setDisabledFields: { (value: SetStateAction<{}>): void; (arg0: (prev: any) => any): void; }) {
     const { consequent } = rule;
 
     if (rule.type === 'BlatantEx') {
@@ -152,7 +149,7 @@ export default function ModelSelector() {
       }));
     } else if (rule.type === 'ValueEx') {
       // Track updated disabled fields separately to avoid unintended changes
-      const updatedDisabledFields = {};
+      const updatedDisabledFields: { [key: string]: boolean } = {};
 
       consequent.forEach(({ index, threshold, type }: { index: number; threshold: any; type: string }) => {
         const fieldName = inputVariables[index]?.name;
@@ -205,15 +202,30 @@ export default function ModelSelector() {
           {inputVariables.map((variable) => (
             <div key={variable.name} className="mb-4">
               <label className="block text-sm font-medium">{variable.question}</label>
+              <p>Discrete: {variable.domain.discrete ? 'Yes' : 'No'}</p>
               {variable.type === 'Continuous' ? (
                 <Input
                   type="number"
                   min={variable.domain.lower}
                   max={variable.domain.upper}
-                  step={variable.domain.interval}
-                  onChange={(e) => handleInputChange(variable.name, e.target.value)}
+                  step={variable.domain.discrete ? variable.domain.interval : "any"} // Use "any" for non-discrete inputs
+                  onInput={(e) => {
+                    // Prevent invalid input for discrete variables
+                    const value = parseFloat(e.currentTarget.value);
+                    if (variable.domain.discrete && value % variable.domain.interval !== 0) {
+                      e.currentTarget.value = (Math.round(value / variable.domain.interval) * variable.domain.interval).toString();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (!isNaN(value)) {
+                      handleInputChange(variable.name, value);
+                    }
+                  }}
                   disabled={disabledFields[variable.name]}
                 />
+
+
               ) : (
                 <Select onValueChange={(value) => handleInputChange(variable.name, value)} disabled={disabledFields[variable.name]} value={formData[variable.name]}>
                   <SelectTrigger className="w-full">{formData[variable.name] || "Select an option"}</SelectTrigger>

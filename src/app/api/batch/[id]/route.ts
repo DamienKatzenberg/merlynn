@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
+    const { id } = await params;
     const url = new URL(req.nextUrl);
     const model = url.searchParams.get("model");
 
@@ -54,7 +54,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     try {
         const contentType = await req.headers.get('content-type');
-        console.log('Content-Type:', contentType);
         // Parse the incoming form data
         const formData = await req.formData();
         const file = formData.get('file') as File;
@@ -62,11 +61,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         if (!file) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
-
-        console.log('Model ID:', id);
-        console.log('Uploaded File Name:', file.name);
-        console.log('File Type:', file.type);
-        console.log('File Size:', file.size);
 
         // Prepare a new FormData instance for the Up2Tom API
         const up2TomFormData = new FormData();
@@ -90,7 +84,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
 
         const responseData = await up2TomResponse.json();
-        console.log('responseData:', responseData);
         return NextResponse.json({ message: 'File uploaded successfully', data: responseData });
     } catch (error) {
         console.error('Error handling file upload:', error);

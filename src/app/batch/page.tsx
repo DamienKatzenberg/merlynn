@@ -17,7 +17,6 @@ export default function Batch() {
             const response = await fetch("/api/batch?model=" + selectedModel);
             const data = await response.json();
             setJobs(data.data.files);
-            console.log(data.data.files);
         } catch (error) {
             console.error("Error fetching jobs:", error);
         }

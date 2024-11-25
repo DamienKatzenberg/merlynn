@@ -72,7 +72,6 @@ export default function FileUpload({ setCurrentlySelectedModel }: { setCurrently
             const result = await response.json();
             setToastMessage('File uploaded successfully.');
             setShowToast(true);
-            console.log('Uploaded file details:', result);
         } catch (error) {
             setToastMessage('Failed to upload file. Please try again.');
             setShowToast(true);
